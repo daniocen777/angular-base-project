@@ -7,6 +7,7 @@ import { Observable } from "rxjs/Observable";
 import "rxjs/add/operator/map";
 import "rxjs/add/operator/catch";
 import { Router } from "@angular/router";
+import { SubirArchivoService } from "../subir-archivo/subir-archivo.service";
 
 declare let alertify: any;
 
@@ -15,7 +16,11 @@ export class UsuarioService {
   usuario: Usuario;
   token: string;
   menu: any[] = [];
-  constructor(private http: HttpClient, private router: Router) {
+  constructor(
+    private http: HttpClient,
+    private router: Router,
+    private _subirArchivoService: SubirArchivoService
+  ) {
     this.cargarStorage();
   }
 
@@ -103,5 +108,47 @@ export class UsuarioService {
         .show();
       return resp.usuario;
     });
+  }
+
+  actualizarUsuario(usuario: Usuario) {
+    let url =
+      URL_SERVICIOS + "/usuario/" + usuario._id + "?token=" + this.token;
+    return this.http.put(url, usuario).map((resp: any) => {
+      let usuarioDB: Usuario = resp.usuario;
+      this.guardarStorage(usuarioDB._id, this.token, usuarioDB);
+      alertify
+        .alert()
+        .setting({
+          label: "Aceptar",
+          message: "El usaurio fue actualizado correctamente",
+          onok: function() {
+            alertify.success("Usuario actualizado");
+          }
+        })
+        .show();
+      return true;
+    });
+  }
+
+  cambiarImagen(file: File, id: string) {
+    this._subirArchivoService
+      .subirArchivo(file, "usuarios", id)
+      .then((resp: any) => {
+        this.usuario.img = resp.usuario.img;
+        alertify
+          .alert()
+          .setting({
+            label: "Aceptar",
+            message: "Imagen actualizada correctamente",
+            onok: function() {
+              alertify.success("Imagen actualizada");
+            }
+          })
+          .show();
+        this.guardarStorage(id, this.token, this.usuario);
+      })
+      .catch(error => {
+        console.log(error);
+      });
   }
 }
